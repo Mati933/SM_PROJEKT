@@ -89,19 +89,6 @@ void zadanie3_4()
 }
 uint8_t komunikat[3];
 int liczba=0;
-void zadanie5()
-{
-	if(HAL_UART_Receive(&huart3, komunikat, 3, HAL_MAX_DELAY)==HAL_OK)
-	{
-        sscanf(komunikat,"%d",&liczba);
-        printf("LICZBA TO: %d\n",liczba);
-        __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, liczba*10);
-        HAL_Delay(200);
-        float value=BH1750_ReadLux(&hbh1750_1);
-        printf("LUXY: %.3f\n",value);
-
-	}
-}
 int czas=0;
 void zadanie6()
 {
