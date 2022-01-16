@@ -80,30 +80,6 @@ int __io_putchar(int ch)
 	HAL_UART_Transmit(&huart3, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
 	return ch;
 }
-int value_int=0;
-void zadanie3_4()
-{
-	 HAL_Delay(100);
-	 value_int=BH1750_ReadLux(&hbh1750_1);
-	 printf("LUXY: %d\n",value_int); // to do 4
-}
-uint8_t komunikat[3];
-int liczba=0;
-int czas=0;
-void zadanie6()
-{
-	 HAL_Delay(100);
-	 float value=BH1750_ReadLux(&hbh1750_1);
-	 printf("LUX %.3f,PWM: %d\n",value,czas);
-	__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, czas);
-		  czas=czas+25;
-		 	 if(czas>1000)
-		 	 {
-		 		 czas=0;
-
-		 	 }
-}
-
 //PID
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
