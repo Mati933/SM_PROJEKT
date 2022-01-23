@@ -62,7 +62,7 @@ main-build: Pliss.elf secondary-outputs
 
 # Tool invocations
 Pliss.elf: $(OBJS) $(USER_OBJS) C:\Users\Ja\STM32CubeIDE\workspace_1.7.0\Pliss\STM32F746ZGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Pliss.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"C:\Users\Ja\STM32CubeIDE\workspace_1.7.0\Pliss\STM32F746ZGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Pliss.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
+	arm-none-eabi-gcc -o "Pliss.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"C:\Users\Ja\STM32CubeIDE\workspace_1.7.0\Pliss\STM32F746ZGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Pliss.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

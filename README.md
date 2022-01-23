@@ -1,2 +1,0 @@
-# SM_PROJEKT
-Regulacja

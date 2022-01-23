@@ -60,10 +60,20 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define USER_Btn_Pin GPIO_PIN_13
 #define USER_Btn_GPIO_Port GPIOC
+#define D7_Pin GPIO_PIN_2
+#define D7_GPIO_Port GPIOF
+#define D4_Pin GPIO_PIN_5
+#define D4_GPIO_Port GPIOF
+#define D5_Pin GPIO_PIN_10
+#define D5_GPIO_Port GPIOF
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
 #define RMII_MDC_Pin GPIO_PIN_1
 #define RMII_MDC_GPIO_Port GPIOC
+#define LCD_RS_Pin GPIO_PIN_2
+#define LCD_RS_GPIO_Port GPIOC
+#define LCD_E_Pin GPIO_PIN_3
+#define LCD_E_GPIO_Port GPIOC
 #define RMII_REF_CLK_Pin GPIO_PIN_1
 #define RMII_REF_CLK_GPIO_Port GPIOA
 #define RMII_MDIO_Pin GPIO_PIN_2
@@ -102,6 +112,8 @@ void Error_Handler(void);
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
+#define D6_Pin GPIO_PIN_0
+#define D6_GPIO_Port GPIOD
 #define RMII_TX_EN_Pin GPIO_PIN_11
 #define RMII_TX_EN_GPIO_Port GPIOG
 #define RMII_TXD0_Pin GPIO_PIN_13

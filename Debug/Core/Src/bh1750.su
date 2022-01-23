@@ -1,2 +1,2 @@
-bh1750.c:38:6:BH1750_Init	32	static
-bh1750.c:55:7:BH1750_ReadLux	32	static
+bh1750.c:35:6:BH1750_Init	32	static
+bh1750.c:52:7:BH1750_ReadLux	32	static

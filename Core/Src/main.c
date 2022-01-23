@@ -31,6 +31,8 @@
 #include "stdio.h"
 #include "bh1750_config.h"
 #include "PID.h"
+#include "lcd_config.h"
+#include <stdlib.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -68,7 +70,22 @@ pid_str*PID;
 float kp_init=4.38127169718089; //1.5
 float ki_init=0.355762323613465; //0.5
 float kd_init=0;
+float zak=0;
+float elo=0;
 int anti_windup_limit_init=20;
+int PWM=0;
+float uchyb;
+
+//UART
+#define LINE_MAX_LENGTH	80
+static char line_buffer[LINE_MAX_LENGTH + 1];
+char tablica[6]="STOP\0";
+static uint32_t line_length;
+uint8_t value;
+int rand2;
+time_t t;
+
+int START=0;
 int __io_putchar(int ch)
 {
 	if(ch=='\n')
@@ -80,11 +97,64 @@ int __io_putchar(int ch)
 	HAL_UART_Transmit(&huart3, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
 	return ch;
 }
+int a=5;
+	    int c=10;
+	    int m=89;
+	    int los=0;
+	    float x=0;
+float losowa()
+{
+
+
+	    los=(a*los+c)%m;
+	    x=(float)los/(float)m-0.5;
+	    x=abs(x*400);
+
+	    return x;
+}
+void line_append(uint8_t value)
+{
+	if (value == '\r' || value == '\n')
+	{
+		// odebraliśmy znak końca linii
+		if (line_length > 0)
+		{
+			// jeśli bufor nie jest pusty to dodajemy 0 na końcu linii
+			line_buffer[line_length] = '\0';
+			if(strcmp(line_buffer,tablica)==0)
+			{
+				START=0;
+				//printf("TWOJASTARA\n");
+			}
+			else
+			{
+				sscanf(line_buffer,"Kp%fKd%fKi%fZ%f",&kp_init,&kd_init,&ki_init,&zak);
+				pid_init(PID,kp_init,ki_init,kd_init,anti_windup_limit_init);
+				START=1;
+			}
+			//printf("%c\n",line_buffer[0]);
+			line_length = 0;
+		}
+	}
+	else
+	{
+		if (line_length >= LINE_MAX_LENGTH)
+		{
+			// za dużo danych, usuwamy wszystko co odebraliśmy dotychczas
+			line_length = 0;
+		}
+		// dopisujemy wartość do bufora
+		line_buffer[line_length++] = value;
+	}
+}
 //PID
+int j=0;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim == &htim6)
   {
+	  if(START)
+	  {
 	 //SP
 	 HAL_ADC_Start(&hadc1);
 	 HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
@@ -93,27 +163,50 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	 //PV
 	 value_PV=BH1750_ReadLux(&hbh1750_1);
-	 printf("%d %d\n",value_PV,value_SP);
+
+
 	 value_U=pid_calculate(PID, value_SP, value_PV);
-	 int PWM=__HAL_TIM_GET_COMPARE(&htim3,TIM_CHANNEL_1);
+	 PWM=__HAL_TIM_GET_COMPARE(&htim3,TIM_CHANNEL_1);
 	 PWM=PWM+value_U;
 	 if(PWM<0)
 	 {
 		 PWM=0;
 	 }
+	 else if(PWM>1000)
+	 {
+		 PWM=1000;
+	 }
+	 printf("PV%dSP%dCV%d\n",value_PV,value_SP,PWM);
 	 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWM);
-	// printf("SYGNAL STERUAJCY: %d\n",value_U);
-	// printf("PWM: %d\n",PWM);
 	 HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+	  }
+	  else
+	  {
+		  pid_reset(&PID);
+		  PWM=0;
+		  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWM);
+
+	  }
+
+
+
+  }
+  if (htim == &htim10)
+  {
+	  if(zak==1)
+	  {
+	  rand2=losowa();
+	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, rand2);
+	  j=1;
+	  }
+	  else if(zak==0&&j==1)
+	  {
+		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0);
+		j=0;
+	  }
+
   }
 }
-/*void zadanie_pid()
-{
-	HAL_Delay(1000);
-	value_PV=BH1750_ReadLux(&hbh1750_1);
-	printf("%d\n",value_PV);
-	//printf("SP: %d\n",value_SP);
-}*/
 /* USER CODE END 0 */
 
 /**
@@ -150,16 +243,22 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM6_Init();
   MX_ADC1_Init();
+  MX_TIM7_Init();
+  MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
   BH1750_Init(&hbh1750_1);
   HAL_TIM_Base_Start_IT(&htim3);
   HAL_TIM_Base_Start_IT(&htim6);
+  HAL_TIM_Base_Start_IT(&htim10);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
   //pid
   pid_init(PID,kp_init,ki_init,kd_init,anti_windup_limit_init);
-  //pid_reset(PID);
+  LCD_Init(&hlcd1);
+  LCD_printf(&hlcd1, "Projekt SM");
+
+
 
 
   /* USER CODE END 2 */
@@ -171,18 +270,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	 // HAL_Delay(100);
-	 // float value=BH1750_ReadLux(&hbh1750_1);
-	//  printf("LUX: %.3f,PWM: %d\n",value,czas); zadanie 6
-
-	 // printf("LUXY: %.3f\n",value);
-
-	  //zadanie6();
-
-
-
-
-
+	  if (HAL_UART_Receive(&huart3, &value, 1, 0) == HAL_OK)
+	  {
+	  	line_append(value);
+	  }
 
 
   }
