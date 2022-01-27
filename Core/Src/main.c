@@ -63,6 +63,8 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+//Sp5Kp2Kd0Ki0.5Z0 komenda UART
+
 int value_PV;
 int value_SP=10;
 int value_U;
@@ -74,7 +76,7 @@ float zak=0;
 float elo=0;
 int anti_windup_limit_init=20;
 int PWM=0;
-float uchyb;
+
 
 //UART
 #define LINE_MAX_LENGTH	80
@@ -83,9 +85,8 @@ char tablica[6]="STOP\0";
 static uint32_t line_length;
 uint8_t value;
 int rand2;
-time_t t;
+uint32_t adc,adc2;
 
-int START=0;
 int __io_putchar(int ch)
 {
 	if(ch=='\n')
@@ -98,10 +99,10 @@ int __io_putchar(int ch)
 	return ch;
 }
 int a=5;
-	    int c=10;
-	    int m=89;
-	    int los=0;
-	    float x=0;
+int c=10;
+int m=89;
+int los=0;
+float x=0;
 float losowa()
 {
 
@@ -112,54 +113,28 @@ float losowa()
 
 	    return x;
 }
-void line_append(uint8_t value)
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-	if (value == '\r' || value == '\n')
+	if(hadc==&hadc1)
 	{
-		// odebraliśmy znak końca linii
-		if (line_length > 0)
+		adc=HAL_ADC_GetValue(&hadc1);
+		if(abs(adc-adc2)>50)
 		{
-			// jeśli bufor nie jest pusty to dodajemy 0 na końcu linii
-			line_buffer[line_length] = '\0';
-			if(strcmp(line_buffer,tablica)==0)
-			{
-				START=0;
-				//printf("TWOJASTARA\n");
-			}
-			else
-			{
-				sscanf(line_buffer,"Kp%fKd%fKi%fZ%f",&kp_init,&kd_init,&ki_init,&zak);
-				pid_init(PID,kp_init,ki_init,kd_init,anti_windup_limit_init);
-				START=1;
-			}
-			//printf("%c\n",line_buffer[0]);
-			line_length = 0;
+
+			value_SP=70*adc/4096;
+			adc2=adc;
 		}
+
 	}
-	else
-	{
-		if (line_length >= LINE_MAX_LENGTH)
-		{
-			// za dużo danych, usuwamy wszystko co odebraliśmy dotychczas
-			line_length = 0;
-		}
-		// dopisujemy wartość do bufora
-		line_buffer[line_length++] = value;
-	}
+
 }
+
 //PID
 int j=0;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim == &htim6)
   {
-	  if(START)
-	  {
-	 //SP
-	 HAL_ADC_Start(&hadc1);
-	 HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-	 uint32_t adc=HAL_ADC_GetValue(&hadc1);
-	 value_SP=70*adc/4096;
 
 	 //PV
 	 value_PV=BH1750_ReadLux(&hbh1750_1);
@@ -179,18 +154,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	 printf("PV%dSP%dCV%d\n",value_PV,value_SP,PWM);
 	 __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWM);
 	 HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+
+	 float uchyb=((float)value_SP-(float)value_PV)/(float)value_SP*100;
+	 LCD_SetCursor(&hlcd1, 0, 0);
+	 LCD_printf(&hlcd1, "PWM: %d",PWM);
+	 LCD_SetCursor(&hlcd1, 1, 0);
+	 LCD_printf(&hlcd1, "Uchyb: %.2f",uchyb);
+
+
 	  }
-	  else
-	  {
-		  pid_reset(&PID);
-		  PWM=0;
-		  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWM);
 
-	  }
-
-
-
-  }
   if (htim == &htim10)
   {
 	  if(zak==1)
@@ -206,6 +179,41 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	  }
 
   }
+}
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if(huart->Instance==USART3)
+	{
+		if (value == '\r' || value == '\n')
+			{
+
+				if (line_length > 0)
+				{
+
+					line_buffer[line_length] = '\0';
+					sscanf(line_buffer,"Sp%dKp%fKd%fKi%fZ%f",&value_SP,&kp_init,&kd_init,&ki_init,&zak);
+					pid_reset(&PID);
+					pid_init(PID,kp_init,ki_init,kd_init,anti_windup_limit_init);
+					/*PWM=0;
+					__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, PWM);*/
+
+
+
+					line_length = 0;
+				}
+			}
+			else
+			{
+				if (line_length >= LINE_MAX_LENGTH)
+				{
+					// za dużo danych, usuwamy wszystko co odebraliśmy dotychczas
+					line_length = 0;
+				}
+				// dopisujemy wartość do bufora
+				line_buffer[line_length++] = value;
+			}
+	}
+	  HAL_UART_Receive_IT(&huart3, &value,1);
 }
 /* USER CODE END 0 */
 
@@ -253,10 +261,13 @@ int main(void)
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
+  HAL_UART_Receive_IT(&huart3, &value,1);
   //pid
   pid_init(PID,kp_init,ki_init,kd_init,anti_windup_limit_init);
   LCD_Init(&hlcd1);
-  LCD_printf(&hlcd1, "Projekt SM");
+
+
+
 
 
 
@@ -270,10 +281,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if (HAL_UART_Receive(&huart3, &value, 1, 0) == HAL_OK)
-	  {
-	  	line_append(value);
-	  }
+	 HAL_ADC_Start_IT(&hadc1);
+
 
 
   }
